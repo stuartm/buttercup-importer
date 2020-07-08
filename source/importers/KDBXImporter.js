@@ -1,11 +1,12 @@
 const fs = require("fs");
 const kdbxweb = require("kdbxweb");
+const pify = require("pify");
 const { argon2 } = require("../crypto/argon2.js");
+const KeePass2XMLImporter = require("./KeePass2XMLImporter.js");
 
 kdbxweb.CryptoEngine.argon2 = argon2;
 
-var Buttercup = require("buttercup"),
-    KeePass2XMLImporter = require("./KeePass2XMLImporter.js");
+const readFile = pify(fs.readFile);
 
 function toArrayBuffer(buffer) {
     var ab = new ArrayBuffer(buffer.length);
@@ -16,33 +17,57 @@ function toArrayBuffer(buffer) {
     return ab;
 }
 
-function KDBXImporter(filename) {
-    this._filename = filename;
+/**
+ * Importer for KDBX vaults (<= v4)
+ * @memberof module:ButtercupImporter
+ */
+class KDBXImporter {
+    /**
+     * Create a new KDBX importer
+     * @param {kdbxweb.Kdbx} kdbxDB KDBX database instance
+     */
+    constructor(kdbxDB) {
+        this._db = kdbxDB;
+    }
+
+    /**
+     * Export to a Buttercup vault
+     * @returns {Promise.<Vault>}
+     * @memberof KDBXImporter
+     */
+    export() {
+        return Promise.resolve()
+            .then(() => this._db.saveXml())
+            .then(xmlString => {
+                const xmlImporter = new KeePass2XMLImporter(xmlString);
+                return xmlImporter.export();
+            });
+    }
 }
 
-KDBXImporter.prototype.export = function(password) {
-    var filename = this._filename;
-    return new Promise(function(resolve, reject) {
-        fs.readFile(filename, function(err, data) {
-            if (err) {
-                return reject(err);
-            }
-            resolve(data);
-        });
-    })
-        .then(function(kdbxRaw) {
-            var credentials = new kdbxweb.Credentials(
-                kdbxweb.ProtectedValue.fromString(password)
+/**
+ * Load an importer from a KDBX file
+ * @param {String} filename The file to load from
+ * @param {String} password The vault password
+ * @param {String=} keyfile The key filename, if applicable
+ * @returns {Promise.<KDBXImporter>}
+ * @static
+ * @memberof KDBXImporter
+ */
+KDBXImporter.loadFromFile = function(filename, password, keyfile) {
+    const kdbxFiles = [readFile(filename)];
+    if (keyfile) {
+        kdbxFiles.push(readFile(keyfile));
+    }
+    return Promise.all(kdbxFiles)
+        .then(([baseFile, keyFile]) => {
+            const credentials = new kdbxweb.Credentials(
+                kdbxweb.ProtectedValue.fromString(password),
+                keyFile ? toArrayBuffer(keyFile) : undefined
             );
-            return kdbxweb.Kdbx.load(toArrayBuffer(kdbxRaw), credentials);
+            return kdbxweb.Kdbx.load(toArrayBuffer(baseFile), credentials);
         })
-        .then(function(db) {
-            return db.saveXml();
-        })
-        .then(function(xmlString) {
-            var xmlImporter = new KeePass2XMLImporter(xmlString);
-            return xmlImporter.exportArchive();
-        });
+        .then(db => new KDBXImporter(db));
 };
 
 module.exports = KDBXImporter;

@@ -1,5 +1,51 @@
 # Buttercup importer changelog
 
+## v2.0.3
+_2020-07-07_
+
+ * **Bugfix**:
+   * `ButtercupCSVImporter` not importing correctly
+     * CSV item type (group/entry) not detected
+     * Group ID not set
+     * Group parent not set
+
+## v2.0.2
+_2020-07-06_
+
+ * **Bugfix**
+   * `ButtercupCSVImporter` not exported correctly
+
+## v2.0.1
+_2020-07-06_
+
+ * **Bugfix**
+   * `package.json` `main` points to incorrect location
+
+## v2.0.0
+_2020-05-30_
+
+ * **Major rebuild**
+ * Buttercup vault importer (.bcup)
+ * All importers use classes
+ * Buttercup core version 4
+
+## v1.3.0
+_2020-03-31_
+
+ * Update all dependencies
+ * **Bugfix**:
+   * [#54](https://github.com/buttercup/buttercup-importer/pull/54) Fix argon2 Windows builds
+
+## v1.2.0
+_2020-02-11_
+
+ * Generic CSV importer
+
+## v1.1.0
+_2019-11-14_
+
+ * KDBX key file support
+
 ## v1.0.0
 _2019-10-02_
 
